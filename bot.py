@@ -5,6 +5,8 @@ from time import sleep
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver.chrome.service import Service as ChromeService
+from selenium.webdriver.chrome.options import Options as ChromeOptions
 
 
 class Bot:
@@ -41,33 +43,25 @@ class Bot:
         print("|   Made by : Simon Farah                                |")
         print("|   Github  : https://github.com/simonfarah/tiktok-bot   |")
         print("|                                                        |")
-        print("+--------------------------------------------------------+")
-
-        print("\n")
+        print("+--------------------------------------------------------+\n")
 
     def _init_driver(self):
         try:
             print("[~] Loading driver, please wait...")
 
-            options = webdriver.FirefoxOptions()
-            options.binary_location = "/usr/bin/firefox"
-            options.add_argument("--width=800")
-            options.add_argument("--height=700")
+            options = ChromeOptions()
+            options.binary_location = "/usr/bin/google-chrome"  # Adjust if needed
+            options.add_argument("--window-size=800,700")
 
-            service = webdriver.FirefoxService(log_output="geckodriver.log")
-            service.path = (
-                "/usr/local/bin/geckodriver"  # Make sure the path is correct
-            )
+            service = ChromeService(executable_path="/usr/local/bin/chromedriver")  # Adjust path if needed
 
-            driver = webdriver.Firefox(options=options, service=service)
+            driver = webdriver.Chrome(service=service, options=options)
 
-            print("[+] Driver loaded successfully")
+            print("[+] Driver loaded successfully\n")
+            return driver
         except Exception as e:
             print("[x] Error loading driver: {}".format(e))
             exit(1)
-
-        print("\n")
-        return driver
 
     def _init_services(self):
         return {
@@ -111,19 +105,14 @@ class Bot:
     def _solve_captcha(self):
         self._wait_for_element(By.TAG_NAME, "input")
         print("[~] Please complete the captcha")
-
         self._wait_for_element(By.LINK_TEXT, "Youtube")
-        print("[+] Captcha completed successfully")
-
-        print("\n")
+        print("[+] Captcha completed successfully\n")
 
     def _check_services_status(self):
         for service in self.services:
             selector = self.services[service]["selector"]
-
             try:
                 element = self.driver.find_element(By.CLASS_NAME, selector)
-
                 if element.is_enabled():
                     self.services[service]["status"] = "[WORKING]"
                 else:
@@ -135,9 +124,7 @@ class Bot:
         for index, service in enumerate(self.services):
             title = self.services[service]["title"]
             status = self.services[service]["status"]
-
             print("[{}] {}".format(str(index + 1), title).ljust(30), status)
-
         print("\n")
 
     def _choose_service(self):
@@ -145,61 +132,46 @@ class Bot:
             try:
                 choice = int(input("[~] Choose an option : "))
             except ValueError:
-                print("[!] Invalid input format. Please try again...")
-                print("\n")
+                print("[!] Invalid input format. Please try again...\n")
                 continue
 
             if choice in range(1, 8):
                 key = list(self.services.keys())[choice - 1]
-
                 if self.services[key]["status"] == "[OFFLINE]":
-                    print("[!] Service is offline. Please choose another...")
-                    print("\n")
+                    print("[!] Service is offline. Please choose another...\n")
                     continue
 
-                print("[+] You have chosen {}".format(self.services[key]["title"]))
-                print("\n")
+                print("[+] You have chosen {}\n".format(self.services[key]["title"]))
                 break
             else:
-                print("[!] No service found with this number")
-                print("\n")
+                print("[!] No service found with this number\n")
 
         return key
 
     def _choose_video_url(self):
         video_url = input("[~] Video URL : ")
         print("\n")
-
         return video_url
 
     def _start_service(self, service, video_url):
-        # Click on the corresponding service button
         self._wait_for_element(
             By.CLASS_NAME, self.services[service]["selector"]
         ).click()
 
-        # Get the container of the selected service
         container = self._wait_for_element(
             By.CSS_SELECTOR, "div.col-sm-5.col-xs-12.p-1.container:not(.nonec)"
         )
 
-        # Insert the video url in the input field
         input_element = container.find_element(By.TAG_NAME, "input")
         input_element.clear()
         input_element.send_keys(video_url)
 
         while True:
-            # Click the search button
             container.find_element(By.CSS_SELECTOR, "button.btn.btn-primary").click()
-
             sleep(3)
-
-            # Click the submit button if it's present, otherwise pass
             try:
                 container.find_element(By.CSS_SELECTOR, "button.btn.btn-dark").click()
-                print(
-                    "[~] {} sent successfully".format(self.services[service]["title"])
-                )
+                print("[~] {} sent successfully".format(self.services[service]["title"]))
             except NoSuchElementException:
                 pass
 
@@ -219,14 +191,9 @@ class Bot:
         try:
             element = container.find_element(By.CSS_SELECTOR, "span.br")
             text = element.text
-
             if "Please wait" in text:
                 [minutes, seconds] = re.findall(r"\d+", text)
-                remaining_time = (
-                    int(minutes) * 60 + int(seconds) + 5
-                )  # plus 5 for safety
-
-                return remaining_time
+                return int(minutes) * 60 + int(seconds) + 5
             else:
                 print("NO TIME")
                 return None
